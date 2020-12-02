@@ -1,6 +1,9 @@
 #
 # Taken from https://towardsdatascience.com/train-conversational-ai-in-3-lines-of-code-with-nemo-and-lightning-a6088988ae37
 #
+# Quartznet model architecture:
+# https://github.com/NVIDIA/NeMo/blob/main/examples/asr/conf/quartznet_15x5.yaml
+#
 
 import argparse
 
