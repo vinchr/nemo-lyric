@@ -6,6 +6,7 @@
 #
 
 import argparse
+import json
 
 from ruamel.yaml import YAML
 
@@ -37,17 +38,33 @@ def train_asr(params):
         cfg=DictConfig(params['model']), trainer=trainer)
 
     trainer.fit(quartznet_model)
-    trainer.test(test_manifest)
+    return quartznet_model
+    #trainer.test(test_manifest)
+
+
+def validate_asr(asr_model, val_ds):
+    val_set = None
+    with open(val_ds) as F:
+        val_set = json.load(val_ds)
+    val_files = [t["audio_filepath"] for t in val_set[0:4]]
+    transcription = asr_model.transcribe(val_files)
+    print(transcription)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Example ASR Trainer")
     parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
     parser.add_argument("--train-ds", required=True, default=None, type=str)
-    parser.add_argument("--val-ds", required=True, default=None, type=str)
+    parser.add_argument("--val-ds", required=False, default=None, type=str)
+    parser.add_argument("--save", required=False, default=None, type=str)
     args = parser.parse_args()
+
     params = read_model_cfg(args.model, args.train_ds, args.val_ds)
-    train_asr(params)
+    asr_model = train_asr(params)
+    if args.save:
+        asr_model.save_to(args.save)
+    if args.val_ds:
+        validate_asr(asr_model)
 
 
 if __name__ == '__main__':
