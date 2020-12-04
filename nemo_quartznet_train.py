@@ -31,8 +31,8 @@ def read_model_cfg(config_path, train_manifest, test_manifest):
     return params
 
 
-def train_asr(params):
-    trainer = pl.Trainer(gpus=1, max_epochs=500)
+def train_asr(params, gpus, epochs):
+    trainer = pl.Trainer(gpus=gpus, max_epochs=epochs)
     #trainer = pl.Trainer(gpus=1, max_epochs=5)
     #trainer = pl.Trainer(gpus=0, max_epochs=1)
     quartznet_model = nemo_asr.models.EncDecCTCModel(
@@ -64,6 +64,8 @@ def main():
     parser = argparse.ArgumentParser(description="Example ASR Trainer")
     parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
     parser.add_argument("--train-ds", required=False, default=None, type=str)
+    parser.add_argument("--gpus", required=False, default=1, type=int)
+    parser.add_argument("--epochs", required=False, default=1, type=int)
     parser.add_argument("--restore", required=False, default=None, type=str)
     parser.add_argument("--pretrained", required=False, default=None, type=str)
     parser.add_argument("--val-ds", required=False, default=None, type=str)
@@ -88,7 +90,7 @@ def main():
     if args.restore:
         asr_model = restore_asr(args.restore)
     elif args.train_ds:
-        asr_model = train_asr(params)
+        asr_model = train_asr(params, args.gpus, args.epochs)
         if args.save:
             asr_model.save_to(args.save)
 
