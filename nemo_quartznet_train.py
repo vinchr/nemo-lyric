@@ -22,17 +22,23 @@ QUARTZNET_PATH = os.path.join(
                               NEMO_REPO_PATH,
                               'examples/asr/conf/quartznet_15x5.yaml')
 
-def read_model_cfg(config_path, train_manifest, test_manifest):
+
+def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate):
     yaml = YAML(typ='safe')
     with open(config_path) as f:
         params = yaml.load(f)
     params['model']['train_ds']['manifest_filepath'] = train_manifest
     params['model']['validation_ds']['manifest_filepath'] = test_manifest
+    if sample_rate:
+        params['model']['sample_rate'] = sample_rate
+        params['model']['train_ds']['sample_rate'] = sample_rate
+        params['model']['validation_ds']['sample_rate'] = sample_rate
     return params
 
 
-def train_asr(params, gpus, epochs):
-    trainer = pl.Trainer(gpus=gpus, max_epochs=epochs)
+def train_asr(params, gpus, epochs, do_ddp):
+    accelerator = 'ddp' if do_ddp else None
+    trainer = pl.Trainer(gpus=gpus, max_epochs=epochs, accelerator=accelerator)
     #trainer = pl.Trainer(gpus=1, max_epochs=5)
     #trainer = pl.Trainer(gpus=0, max_epochs=1)
     quartznet_model = nemo_asr.models.EncDecCTCModel(
@@ -65,7 +71,12 @@ def main():
     parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
     parser.add_argument("--train-ds", required=False, default=None, type=str)
     parser.add_argument("--gpus", required=False, default=1, type=int)
+    parser.add_argument("--ddp", required=False, dest='ddp', action='store_true')
+    parser.add_argument("--no-ddp", required=False, dest='ddp', action='store_false')
+    parser.set_defaults(ddp=True)
     parser.add_argument("--epochs", required=False, default=1, type=int)
+    parser.add_argument("--sample-rate", required=False, default=None, type=int)
+    parser.add_argument("--batch-size", required=False, default=None, type=int)
     parser.add_argument("--restore", required=False, default=None, type=str)
     parser.add_argument("--pretrained", required=False, default=None, type=str)
     parser.add_argument("--val-ds", required=False, default=None, type=str)
@@ -77,7 +88,7 @@ def main():
     assert not (args.train_ds and args.restore)
     assert not (args.restore and args.save)
 
-    params = read_model_cfg(args.model, args.train_ds, args.val_ds)
+    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate)
 
     asr_pretrained = None
     asr_model = None
@@ -90,7 +101,7 @@ def main():
     if args.restore:
         asr_model = restore_asr(args.restore)
     elif args.train_ds:
-        asr_model = train_asr(params, args.gpus, args.epochs)
+        asr_model = train_asr(params, args.gpus, args.epochs, args.ddp)
         if args.save:
             asr_model.save_to(args.save)
 
