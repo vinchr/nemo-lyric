@@ -23,7 +23,7 @@ QUARTZNET_PATH = os.path.join(
                               'examples/asr/conf/quartznet_15x5.yaml')
 
 
-def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate):
+def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate, batch_size):
     yaml = YAML(typ='safe')
     with open(config_path) as f:
         params = yaml.load(f)
@@ -33,6 +33,9 @@ def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate):
         params['model']['sample_rate'] = sample_rate
         params['model']['train_ds']['sample_rate'] = sample_rate
         params['model']['validation_ds']['sample_rate'] = sample_rate
+    if batch_size:
+        params['model']['train_ds']['batch_size'] = batch_size
+        params['model']['validation_ds']['batch_size'] = batch_size
     return params
 
 
@@ -88,7 +91,7 @@ def main():
     assert not (args.train_ds and args.restore)
     assert not (args.restore and args.save)
 
-    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate)
+    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate, args.batch_size)
 
     asr_pretrained = None
     asr_model = None
