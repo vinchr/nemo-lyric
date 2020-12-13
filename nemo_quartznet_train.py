@@ -46,6 +46,7 @@ def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
     params['model']['validation_ds']['manifest_filepath'] = test_manifest
     if sample_rate:
         params['model']['sample_rate'] = sample_rate
+        params['model']['preprocessor']['params']['sample_rate'] = sample_rate
         params['model']['train_ds']['sample_rate'] = sample_rate
         params['model']['validation_ds']['sample_rate'] = sample_rate
     if batch_size:
@@ -54,17 +55,17 @@ def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
     return params
 
 
-def train_asr(params, gpus, epochs, do_ddp):
+def train_asr(params, resume_from_checkpoint, gpus, epochs, do_ddp):
     accelerator = 'ddp' if do_ddp else None
-    trainer = pl.Trainer(gpus=gpus, max_epochs=epochs, accelerator=accelerator)
-    #trainer = pl.Trainer(gpus=1, max_epochs=5)
-    #trainer = pl.Trainer(gpus=0, max_epochs=1)
+    trainer = pl.Trainer(resume_from_checkpoint=resume_from_checkpoint,
+                         gpus=gpus,
+                         max_epochs=epochs,
+                         accelerator=accelerator)
     quartznet_model = nemo_asr.models.EncDecCTCModel(
         cfg=DictConfig(params['model']), trainer=trainer)
 
     trainer.fit(quartznet_model)
     return quartznet_model
-    #trainer.test(test_manifest)
 
 
 def restore_asr(restore_path):
@@ -125,6 +126,7 @@ def calc_wer(asr_model):
 def main():
     parser = argparse.ArgumentParser(description="Example ASR Trainer")
     parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
+    parser.add_argument("--resume-from-checkpoint", required=False, default=None, type=str)
     parser.add_argument("--train-ds", required=False, default=None, type=str)
     parser.add_argument("--gpus", required=False, default=1, type=int)
     parser.add_argument("--ddp", required=False, dest='ddp', action='store_true')
@@ -158,7 +160,8 @@ def main():
     if args.restore:
         asr_model = restore_asr(args.restore)
     elif args.train_ds:
-        asr_model = train_asr(params, args.gpus, args.epochs, args.ddp)
+        asr_model = train_asr(params, args.resume_from_checkpoint,
+                              args.gpus, args.epochs, args.ddp)
         if args.save:
             asr_model.save_to(args.save)
 
