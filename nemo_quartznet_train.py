@@ -7,14 +7,28 @@
 
 import argparse
 import json
+import os.path
 
 from ruamel.yaml import YAML
 
-import pytorch_lightning as pl
-import nemo.collections.asr as nemo_asr
+from omegaconf import OmegaConf
 from omegaconf import DictConfig
 
-import os.path
+import torch
+import pytorch_lightning as pl
+import nemo.collections.asr as nemo_asr
+
+from nemo.utils import logging
+
+try:
+    from torch.cuda.amp import autocast
+except ImportError:
+    from contextlib import contextmanager
+
+    @contextmanager
+    def autocast(enabled=None):
+        yield
+
 
 NEMO_REPO_PATH = "../NeMo"
 
@@ -23,7 +37,8 @@ QUARTZNET_PATH = os.path.join(
                               'examples/asr/conf/quartznet_15x5.yaml')
 
 
-def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate, batch_size):
+def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
+                   batch_size):
     yaml = YAML(typ='safe')
     with open(config_path) as f:
         params = yaml.load(f)
@@ -65,8 +80,46 @@ def validate_asr(asr_model, val_ds, num_to_validate):
             val_set.append(val)
     val_files = [t["audio_filepath"] for t in val_set[0:num_to_validate]]
     #print(val_files)
-    transcription = asr_model.transcribe(val_files, batch_size=32, logprobs=False)
+    test_cfg = asr_model.cfg['validation_ds']
+    test_cfg['manifest_filepath'] = val_ds
+    asr_model.setup_test_data(test_cfg)
+    # trainer = pl.Trainer()
+    # trainer.test(asr_model.test_dataloader())
+    calc_wer(asr_model)
+    asr_model.preprocessor._sample_rate = test_cfg['sample_rate']
+    print("batch size: ", test_cfg['batch_size'],
+          "preprocessor sample_rate: ", asr_model.preprocessor._sample_rate)
+    transcription = asr_model.transcribe(
+        val_files, batch_size=test_cfg['batch_size'], logprobs=False)
     print(transcription)
+
+
+# Adapted from an example in NeMo repo
+def calc_wer(asr_model):
+    asr_model.eval()
+    labels_map = dict([(i, asr_model.decoder.vocabulary[i]) for i in range(len(asr_model.decoder.vocabulary))])
+    wer = nemo_asr.metrics.wer.WER(vocabulary=asr_model.decoder.vocabulary)
+    hypotheses = []
+    references = []
+    for test_batch in asr_model.test_dataloader():
+        if torch.cuda.is_available():
+            test_batch = [x.cuda() for x in test_batch]
+        with autocast():
+            log_probs, encoded_len, greedy_predictions = asr_model(
+                input_signal=test_batch[0], input_signal_length=test_batch[1]
+            )
+        hypotheses += wer.ctc_decoder_predictions_tensor(greedy_predictions)
+        for batch_ind in range(greedy_predictions.shape[0]):
+            reference = ''.join([labels_map[c] for c in test_batch[2][batch_ind].cpu().detach().numpy()])
+            references.append(reference)
+        del test_batch
+    logging.info(hypotheses)
+    logging.info(references)
+    wer_value = nemo_asr.metrics.wer.word_error_rate(hypotheses=hypotheses, references=references)
+    # if wer_value > args.wer_tolerance:
+    #     raise ValueError(f"Got WER of {wer_value}. It was higher than {args.wer_tolerance}")
+    # logging.info(f'Got WER of {wer_value}. Tolerance was {args.wer_tolerance}')
+    logging.info(f'Got WER of {wer_value}.')
 
 
 def main():
@@ -91,7 +144,8 @@ def main():
     assert not (args.train_ds and args.restore)
     assert not (args.restore and args.save)
 
-    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate, args.batch_size)
+    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate,
+                            args.batch_size)
 
     asr_pretrained = None
     asr_model = None
