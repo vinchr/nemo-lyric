@@ -30,12 +30,6 @@ except ImportError:
         yield
 
 
-NEMO_REPO_PATH = "../NeMo"
-
-QUARTZNET_PATH = os.path.join(
-                              NEMO_REPO_PATH,
-                              'examples/asr/conf/quartznet_15x5.yaml')
-
 
 def read_model_cfg(config_path, args):
     train_manifest = args.train_ds
@@ -141,7 +135,7 @@ def calc_wer(asr_model):
 
 def main():
     parser = argparse.ArgumentParser(description="Example ASR Trainer")
-    parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
+    parser.add_argument("--model", required=False, default=None, type=str)
     parser.add_argument("--resume-from-checkpoint", required=False, default=None, type=str)
     parser.add_argument("--train-ds", required=False, default=None, type=str)
     parser.add_argument("--gpus", required=False, default=torch.cuda.device_count(), type=int)
