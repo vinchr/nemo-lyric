@@ -37,16 +37,24 @@ QUARTZNET_PATH = os.path.join(
                               'examples/asr/conf/quartznet_15x5.yaml')
 
 
-def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
-                   batch_size, gradient_batch_size):
+def read_model_cfg(config_path, args):
+    train_manifest = args.train_ds
+    validation_manifest = args.val_ds
+    sample_rate = args.sample_rate
+    preprocessor_sample_rate = args.preprocessor_sample_rate
+    if not preprocessor_sample_rate:
+        preprocessor_sample_rate = sample_rate
+    batch_size = args.batch_size
+    gradient_batch_size = args.gradient_batch_size
+
     yaml = YAML(typ='safe')
     with open(config_path) as f:
         params = yaml.load(f)
     params['model']['train_ds']['manifest_filepath'] = train_manifest
-    params['model']['validation_ds']['manifest_filepath'] = test_manifest
+    params['model']['validation_ds']['manifest_filepath'] = validation_manifest
     if sample_rate:
         params['model']['sample_rate'] = sample_rate
-        params['model']['preprocessor']['params']['sample_rate'] = sample_rate
+        params['model']['preprocessor']['params']['sample_rate'] = preprocessor_sample_rate
         params['model']['train_ds']['sample_rate'] = sample_rate
         params['model']['validation_ds']['sample_rate'] = sample_rate
     if batch_size:
@@ -136,12 +144,13 @@ def main():
     parser.add_argument("--model", required=False, default=QUARTZNET_PATH, type=str)
     parser.add_argument("--resume-from-checkpoint", required=False, default=None, type=str)
     parser.add_argument("--train-ds", required=False, default=None, type=str)
-    parser.add_argument("--gpus", required=False, default=1, type=int)
+    parser.add_argument("--gpus", required=False, default=torch.cuda.device_count(), type=int)
     parser.add_argument("--ddp", required=False, dest='ddp', action='store_true')
     parser.add_argument("--no-ddp", required=False, dest='ddp', action='store_false')
-    parser.set_defaults(ddp=True)
+    parser.set_defaults(ddp=True if torch.cuda.is_available() else False)
     parser.add_argument("--epochs", required=False, default=1, type=int)
     parser.add_argument("--sample-rate", required=False, default=None, type=int)
+    parser.add_argument("--preprocessor-sample-rate", required=False, default=None, type=int)
     parser.add_argument("--batch-size", required=False, default=None, type=int)
     parser.add_argument("--gradient-batch-size", required=False, default=None, type=int)
     parser.add_argument("--restore", required=False, default=None, type=str)
@@ -155,8 +164,7 @@ def main():
     assert not (args.train_ds and args.restore)
     assert not (args.restore and args.save)
 
-    params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate,
-                            args.batch_size, args.gradient_batch_size)
+    params = read_model_cfg(args.model, args)
 
     asr_pretrained = None
     asr_model = None
