@@ -38,7 +38,7 @@ QUARTZNET_PATH = os.path.join(
 
 
 def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
-                   batch_size):
+                   batch_size, gradient_batch_size):
     yaml = YAML(typ='safe')
     with open(config_path) as f:
         params = yaml.load(f)
@@ -52,6 +52,11 @@ def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
     if batch_size:
         params['model']['train_ds']['batch_size'] = batch_size
         params['model']['validation_ds']['batch_size'] = batch_size
+    if gradient_batch_size:
+        accumulate_grad_batches = gradient_batch_size // params['model']['train_ds']['batch_size']
+        accumulate_grad_batches = max(accumulate_grad_batches, 1)
+        assert 'accumulate_grad_batches' in params['trainer']
+        params['trainer']['accumulate_grad_batches'] = accumulate_grad_batches
     return params
 
 
@@ -138,6 +143,7 @@ def main():
     parser.add_argument("--epochs", required=False, default=1, type=int)
     parser.add_argument("--sample-rate", required=False, default=None, type=int)
     parser.add_argument("--batch-size", required=False, default=None, type=int)
+    parser.add_argument("--gradient-batch-size", required=False, default=None, type=int)
     parser.add_argument("--restore", required=False, default=None, type=str)
     parser.add_argument("--pretrained", required=False, default=None, type=str)
     parser.add_argument("--val-ds", required=False, default=None, type=str)
@@ -150,7 +156,7 @@ def main():
     assert not (args.restore and args.save)
 
     params = read_model_cfg(args.model, args.train_ds, args.val_ds, args.sample_rate,
-                            args.batch_size)
+                            args.batch_size, args.gradient_batch_size)
 
     asr_pretrained = None
     asr_model = None
