@@ -57,10 +57,13 @@ def read_model_cfg(config_path, train_manifest, test_manifest, sample_rate,
 
 def train_asr(params, resume_from_checkpoint, gpus, epochs, do_ddp):
     accelerator = 'ddp' if do_ddp else None
+    # fast_dev_run = 5000
+    precision = 16 if gpus > 0 else 32
     trainer = pl.Trainer(resume_from_checkpoint=resume_from_checkpoint,
                          gpus=gpus,
                          max_epochs=epochs,
-                         accelerator=accelerator)
+                         accelerator=accelerator,
+                         precision=precision)
     quartznet_model = nemo_asr.models.EncDecCTCModel(
         cfg=DictConfig(params['model']), trainer=trainer)
 
