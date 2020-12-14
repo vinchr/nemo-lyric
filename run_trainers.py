@@ -51,7 +51,7 @@ def run_single_trainer(row, models_dir, out_dir, err_dir):
     assert row["epochs"]
     cmd_list.extend(("--epochs", str(row["epochs"])))
     if row["resume"]:
-        cmd_list.extend(("--resume-from-checkpoint", row["checkpoint"]))
+        cmd_list.extend(("--resume-from-checkpoint", row["resume"]))
     cmd_list.extend(row["args"].split())
     print("Running:", " ".join(cmd_list))
     print("stdout: ", out_file)
