@@ -53,11 +53,13 @@ def run_single_trainer(row, models_dir, out_dir, err_dir):
     if row["resume"]:
         cmd_list.extend(("--resume-from-checkpoint", row["checkpoint"]))
     cmd_list.extend(row["args"].split())
-    print("Running: " + " ".join(cmd_list))
+    print("Running:", " ".join(cmd_list))
+    print("stdout: ", out_file)
+    print("stderr: ", err_file)
     with open(out_file, "w") as out_handle:
         with open(err_file, "w") as err_handle:
             subprocess.run(cmd_list, stdout=out_handle, stderr=err_handle, check=True)
-    print("Finished: " + " ".join(cmd_list))
+    print("Finished:", " ".join(cmd_list))
 
 
 def run_trainers(spec_file):
@@ -74,7 +76,7 @@ def run_trainers(spec_file):
     models_dir = os.path.join(train_dir, "models")
     out_dir = os.path.join(train_dir, "out")
     err_dir = os.path.join(train_dir, "err")
-    specs_df = pd.read_csv(spec_file, na_filter=False)
+    specs_df = pd.read_csv(spec_file, na_filter=False, comment='#')
     # for idx, dtype in enumerate(specs_df.dtypes):
     #     if dtype == 'object':
     #         specs_df.iloc[:, idx] = specs_df.iloc[:, idx].astype('str').str.strip()
