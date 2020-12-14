@@ -159,8 +159,6 @@ def main():
     assert not (args.train_ds and args.restore)
     assert not (args.restore and args.save)
 
-    params = read_model_cfg(args.model, args)
-
     asr_pretrained = None
     asr_model = None
 
@@ -172,12 +170,13 @@ def main():
     if args.restore:
         asr_model = restore_asr(args.restore)
     elif args.train_ds:
+        params = read_model_cfg(args.model, args)
         asr_model = train_asr(params, args.resume_from_checkpoint,
                               args.gpus, args.epochs, args.ddp)
         if args.save:
             asr_model.save_to(args.save)
 
-    if args.val_ds:
+    if args.val_ds and not args.train_ds:
         if asr_pretrained:
             validate_asr(asr_pretrained, args.val_ds, args.num_to_validate)
         if asr_model:
