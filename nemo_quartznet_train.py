@@ -66,6 +66,7 @@ def train_asr(params, resume_from_checkpoint, gpus, epochs, do_ddp):
     accelerator = 'ddp' if do_ddp else None
     # fast_dev_run = 5000
     precision = 16 if gpus > 0 else 32
+    precision = 32
     trainer = pl.Trainer(resume_from_checkpoint=resume_from_checkpoint,
                          gpus=gpus,
                          max_epochs=epochs,
