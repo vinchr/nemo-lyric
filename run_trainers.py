@@ -46,7 +46,7 @@ def run_single_trainer(row, models_dir, out_dir, err_dir):
     cmd_list.extend(["--model", model_cfg_filepath])
     cmd_list.extend(["--train-ds", row["train"]])
     if row["validation"]:
-        cmd_list.extend(("--validation-ds", row["validation"]))
+        cmd_list.extend(("--val-ds", row["validation"]))
     cmd_list.extend(["--save", nemo_file])
     assert row["epochs"]
     cmd_list.extend(("--epochs", str(row["epochs"])))
