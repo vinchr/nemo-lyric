@@ -1,0 +1,46 @@
+diff --git a/Evaluate.py b/Evaluate.py
+index 5bcff40..9f652e6 100644
+--- a/Evaluate.py
++++ b/Evaluate.py
+@@ -63,7 +63,7 @@ def read_predictions(cfg):
+         label_filename = os.path.split(label)[1]
+         prediction_filename = label_filename.replace(cfg.get("main", "LABEL_EXT"), cfg.get("main", "PREDICTION_EXT"))
+         prediction = os.path.join(cfg.get("main", "PREDICTION_PATH"), prediction_filename)
+-        audio_filename = label_filename.replace(cfg.get("main", "LABEL_EXT"), ".mp3")
++        audio_filename = label_filename.replace(cfg.get("main", "LABEL_EXT"), ".wav")
+         audio, sr = librosa.load(os.path.join(cfg.get("main", "MP3_PATH"), audio_filename), sr=None, mono=True)
+         total_durations[label_filename] = float(len(audio)) / float(sr)
+ 
+@@ -141,19 +141,23 @@ def compute_metrics(config):
+     return results
+ 
+ def main():
+-    print("EVALUATING on Jamendo dataset, evaluate model from Stoller et al...")
+-    config = ConfigParser(inline_comment_prefixes=["#"])
+-    config.read("conf/stoller.cfg")
+-    results = compute_metrics(config)
+-    print_results(results)
++    #print("EVALUATING on Jamendo dataset, evaluate model from Stoller et al...")
++    #config = ConfigParser(inline_comment_prefixes=["#"])
++    #config.read("conf/stoller.cfg")
++    #results = compute_metrics(config)
++    #print_results(results)
++
++    #print("EVALUATING on Jamendo dataset, evaluate model from Stoller at al, source separated version...")
++    #config = ConfigParser(inline_comment_prefixes=["#"])
++    #config.read("conf/stoller_source_sep.cfg")
++    #results = compute_metrics(config)
++    #print_results(results)
+ 
+-    print("EVALUATING on Jamendo dataset, evaluate model from Stoller at al, source separated version...")
++    ### ADD YOUR OWN MODEL HERE ###
+     config = ConfigParser(inline_comment_prefixes=["#"])
+-    config.read("conf/stoller_source_sep.cfg")
++    config.read("../sample.cfg")
+     results = compute_metrics(config)
+     print_results(results)
+ 
+-    ### ADD YOUR OWN MODEL HERE ###
+-
+ if __name__ == "__main__":
+     main()
