@@ -7,7 +7,7 @@
 
 import numpy as np
 from string import ascii_lowercase
-import librosa
+import librosa,re
 import nemo.collections.asr as nemo_asr
 
 import os.path
@@ -36,6 +36,32 @@ def predict_labels_greedy(alphabet,ctc_probs):
 if __name__ == '__main__':
     print("Using pretrained Quartznet Model.")
     filename = './sample.wav'
+    
+    annotation_timing = [
+           0.543,#mister
+           0.833,#quilter
+           1.361,#is
+           1.443,#the
+           1.659,#apostle
+           2.143,#of
+           2.262,#the
+           2.418,#middle
+           2.659,#classes
+           3.333,#and
+           3.489,#we
+           3.608,#are
+           3.638,#glad
+           4.092,#to
+           4.174,#welcome
+           4.635,#his
+           4.895, #gospel
+    ]
+
+    print('Saving timing annotations.')
+    fname = open('sample_annotation.txt','w')
+    for j in annotation_timing:
+        fname.write(str(j)+'\n')
+    fname.close()
 
     transcript = 'MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL'.lower()
 
@@ -53,8 +79,11 @@ if __name__ == '__main__':
     # https://github.com/lumaku/ctc-segmentation
     #
     config                              = CtcSegmentationParameters()
-    config.subsampling_factor =1
-    config.blank = 28
+
+    #frame duration is the window of the predictions (i.e. logprobs prediction window)
+    config.frame_duration_ms = 20
+    #character that is intended for 'blank' - in our case, we specify the last character in alphabet.
+    config.blank = len(alphabet)-1
     ground_truth_mat, utt_begin_indices = prepare_text(config,transcript,alphabet)
     timings, char_probs, state_list     = ctc_segmentation(config,logprobs[0].numpy(),ground_truth_mat)
     # Obtain list of utterances with time intervals and confidence score
@@ -66,3 +95,25 @@ if __name__ == '__main__':
     print('Quartznet Transcript:',quartznet_transcript[0])
     print('Quartznet Dense Sequnce (greedy search):\n',greedy_transcript)
     print('CTC Segmentation Dense Sequnce:\n',''.join(state_list))
+
+    #save onset per word.
+    print('Saving timing prediction.')
+    fname = open('sample_prediction.txt','w')
+    for i in transcript.split():
+       # re.search performs regular expression operations.
+       # .format inserts characters into {}.  
+       # r'<string>' is considered a raw string.
+       # char.start() gives you the start index of the starting character of the word (i) in transcript string
+       # char.end() gives you the last index of the ending character** of the word (i) in transcript string
+       # **the ending character is offset by one for the regex command, so a -1 is required to get the right 
+       # index
+       char = re.search(r'\b({})\b'.format(i),transcript)
+       #       segments[index of character][start time of char=0]
+       onset = segments[char.start()][0]
+       #       segments[index of character][end time of char=1]
+       term  = segments[char.end()-1][1]
+       fname.write(str(onset)+','+str(term)+'\n')
+    fname.close()
+ 
+
+
