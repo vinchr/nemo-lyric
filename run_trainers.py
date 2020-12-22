@@ -20,13 +20,13 @@ from omegaconf import DictConfig
 
 def run_single_trainer(row, models_dir, out_dir, err_dir):
     # print("row dtypes", row.dtypes)
-    name = ".".join([row["name"], row["desc"]])
+    name = ".".join(filter(None, [row["name"], row["desc"]]))
     os.makedirs(models_dir, exist_ok=True)
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(err_dir, exist_ok=True)
     found_idx = False
     for idx in range(100):
-        name_idx = "{}{:02d}".format(name, idx)
+        name_idx = "{}.{:02d}".format(name, idx)
         nemo_file = os.path.join(models_dir, "quartznet_15x5_" + name_idx + ".nemo")
         out_file = os.path.join(out_dir, name_idx + ".log")
         err_file = os.path.join(err_dir, name_idx + ".err")
