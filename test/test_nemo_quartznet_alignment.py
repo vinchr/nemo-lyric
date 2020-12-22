@@ -21,13 +21,11 @@ super easy configuration...
 pip install ctc_segmentation
 '''
 
-def predict_labels_greedy(alphabet,ctc_probs):
+def predict_labels_greedy(alphabet,probs):
     '''
     model - nemo model
     filename - audio to perform prediction
     '''
-
-    probs = ctc_probs[0].numpy()
 
     alphabet_sequence = ''
     # look at each time and select the highest probability item for that 
@@ -78,10 +76,10 @@ if __name__ == '__main__':
                    "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'",'%']
 
     quartznet = nemo_asr.models.EncDecCTCModel.from_pretrained(model_name="QuartzNet15x5Base-En")
-
+    
     logprobs = quartznet.transcribe([filename],logprobs=True)
-
-    greedy_transcript = predict_labels_greedy(alphabet,logprobs)
+    
+    greedy_transcript = predict_labels_greedy(alphabet,logprobs[0].cpu().numpy())
 
     # adapted example from here:
     # https://github.com/lumaku/ctc-segmentation
@@ -92,7 +90,7 @@ if __name__ == '__main__':
     #character that is intended for 'blank' - in our case, we specify the last character in alphabet.
     config.blank = len(alphabet)-1
     ground_truth_mat, utt_begin_indices = prepare_text(config,transcript,alphabet)
-    timings, char_probs, state_list     = ctc_segmentation(config,logprobs[0].numpy(),ground_truth_mat)
+    timings, char_probs, state_list     = ctc_segmentation(config,logprobs[0].cpu().numpy(),ground_truth_mat)
     # Obtain list of utterances with time intervals and confidence score
     segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
     
