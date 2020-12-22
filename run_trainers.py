@@ -1,10 +1,3 @@
-#
-# Taken from https://towardsdatascience.com/train-conversational-ai-in-3-lines-of-code-with-nemo-and-lightning-a6088988ae37
-#
-# Quartznet model architecture:
-# https://github.com/NVIDIA/NeMo/blob/main/examples/asr/conf/quartznet_15x5.yaml
-#
-
 import argparse
 import json
 import os.path
@@ -16,6 +9,25 @@ from ruamel.yaml import YAML
 
 from omegaconf import OmegaConf
 from omegaconf import DictConfig
+
+
+# Script to run training jobs with nemo_quartznet_train.py on inputs from a csv file
+# Example usage:
+# python run_trainers.py <csvfile>
+# where 'csvfile' looks like the following:
+#
+# training data is in train.json
+# validation data is in validation.json
+# hyper-params / model architecture yaml file is: models/dec14/quartznet_15x5_22k_adam_cosine.yaml
+# Run for 10 epochs
+# No checkpoint file to resume from
+# extra args: --batch-size 16
+# additional naming description: training_97
+#
+# Then the csv file would contain the following:
+#
+# train,validation,subdir,name,epochs,resume,args,desc
+# train.json,validation.json,dec14,22k_adam_cosine,10,,--batch-size 16,training_97
 
 
 def run_single_trainer(row, models_dir, out_dir, err_dir):
