@@ -140,7 +140,7 @@ def validate_asr_with_alignment(asr_model,val_ds,num_to_validate):
 
         ground_truth_mat, utt_begin_indices = prepare_text(config,transcript,alphabet)
 
-        timings, char_probs, state_list     = ctc_segmentation(config,logprobs_list[ii].numpy(),ground_truth_mat)
+        timings, char_probs, state_list     = ctc_segmentation(config,logprobs_list[ii].cpu().numpy(),ground_truth_mat)
         
         # Obtain list of utterances with time intervals and confidence score
         segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
