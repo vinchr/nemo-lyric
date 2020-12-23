@@ -21,12 +21,21 @@ super easy configuration...
 pip install ctc_segmentation
 '''
 
+<<<<<<< HEAD
 def predict_labels_greedy(alphabet,probs):
+=======
+def predict_labels_greedy(alphabet,ctc_probs):
+>>>>>>> ad190e34a6f46942fd84dee79104957d2a06aad4
     '''
     model - nemo model
     filename - audio to perform prediction
     '''
 
+<<<<<<< HEAD
+=======
+    probs = ctc_probs[0].numpy()
+
+>>>>>>> ad190e34a6f46942fd84dee79104957d2a06aad4
     alphabet_sequence = ''
     # look at each time and select the highest probability item for that 
     # time window.
@@ -76,10 +85,17 @@ if __name__ == '__main__':
                    "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'",'%']
 
     quartznet = nemo_asr.models.EncDecCTCModel.from_pretrained(model_name="QuartzNet15x5Base-En")
+<<<<<<< HEAD
     
     logprobs = quartznet.transcribe([filename],logprobs=True)
     
     greedy_transcript = predict_labels_greedy(alphabet,logprobs[0].cpu().numpy())
+=======
+
+    logprobs = quartznet.transcribe([filename],logprobs=True)
+
+    greedy_transcript = predict_labels_greedy(alphabet,logprobs)
+>>>>>>> ad190e34a6f46942fd84dee79104957d2a06aad4
 
     # adapted example from here:
     # https://github.com/lumaku/ctc-segmentation
@@ -90,7 +106,11 @@ if __name__ == '__main__':
     #character that is intended for 'blank' - in our case, we specify the last character in alphabet.
     config.blank = len(alphabet)-1
     ground_truth_mat, utt_begin_indices = prepare_text(config,transcript,alphabet)
+<<<<<<< HEAD
     timings, char_probs, state_list     = ctc_segmentation(config,logprobs[0].cpu().numpy(),ground_truth_mat)
+=======
+    timings, char_probs, state_list     = ctc_segmentation(config,logprobs[0].numpy(),ground_truth_mat)
+>>>>>>> ad190e34a6f46942fd84dee79104957d2a06aad4
     # Obtain list of utterances with time intervals and confidence score
     segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
     
