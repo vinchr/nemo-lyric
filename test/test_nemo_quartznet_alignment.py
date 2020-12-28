@@ -63,7 +63,7 @@ if __name__ == '__main__':
     ]
 
     print('Saving timing annotations.')
-    fname = open('sample_annotation.txt','w')
+    fname = open('sample.wordonset.txt','w')
     for j in annotation_timing:
         fname.write(str(j)+'\n')
     fname.close()
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     #save onset per word.
     print('Saving timing prediction.')
-    fname = open('sample_prediction.txt','w')
+    fname = open('sample_align.csv','w')
     for i in transcript.split():
        # re.search performs regular expression operations.
        # .format inserts characters into {}.  
