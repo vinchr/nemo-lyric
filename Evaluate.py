@@ -70,7 +70,7 @@ def read_predictions(cfg):
         # Get predictions
         with open(prediction) as f:
             pred_rows = list(csv.reader(f, delimiter=str(cfg.get("main", "PREDICTION_DELIM"))))
-        assert (len(pred_rows) == len(rows))
+        assert (len(pred_rows) == len(rows)),label
 
         # Take start times and convert to numpy arrays
         pred_times = np.array([float(row[0]) for row in pred_rows])
@@ -139,7 +139,7 @@ def compute_metrics(config):
         results["mauch_" + str(tolerance)] = (mauch_metric(preds["ref_dict"], preds["pred_dict"], tolerance),
                                         "Mauch metric, threshold of " + str(tolerance) + " seconds")
 
-    return results
+    return results, preds
 
 def main():
     print("EVALUATING on Jamendo dataset, evaluate model from Stoller et al...")

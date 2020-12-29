@@ -71,11 +71,8 @@ def prediction_with_alignment(asr_model,filename,transcript,prediction_dir='./pr
     
     # Obtain list of utterances with time intervals and confidence score
     segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
-    
-    #quartznet_transcript = asr_model.transcribe([filename])
 
     print('Ground Truth Transcript:',transcript)
-    #print('Quartznet Transcript:',quartznet_transcript[0])
     print('CTC Segmentation Dense Sequnce:\n',''.join(state_list))
 
     #save onset per word.
@@ -100,7 +97,7 @@ def prediction_with_alignment(asr_model,filename,transcript,prediction_dir='./pr
        # char.end() gives you the last index of the ending character** of the word (i) in transcript string
        # **the ending character is offset by one for the regex command, so a -1 is required to get the right 
        # index
-       char = re.search(r'\b({})\b'.format(i),transcript)
+       char = re.search(r'{}'.format(i),transcript)
        #       segments[index of character][start time of char=0]
        onset = segments[char.start()][0]
        #       segments[index of character][end time of char=1]
@@ -158,7 +155,8 @@ if __name__ == '__main__':
 
     print('Testing',len(files),'files.')
     ptime = []
-    for i in range(len(files)):
+    #for i in range(len(files)):
+    for i in range(277,len(files)):
         start = time.time()
         print('Testing',strip_path(files[i]))
         prediction_with_alignment(asr_model, files[i], transcripts[i], prediction_path)
