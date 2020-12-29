@@ -31,6 +31,7 @@ import sys
 sys.path.append('../dali-dataset-tools')
 import dali_helpers
 
+import Evaluate
 
 try:
     from torch.cuda.amp import autocast
@@ -71,10 +72,10 @@ def prediction_with_alignment(asr_model,filename,transcript,prediction_dir='./pr
     # Obtain list of utterances with time intervals and confidence score
     segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
     
-    quartznet_transcript = asr_model.transcribe([filename])
+    #quartznet_transcript = asr_model.transcribe([filename])
 
     print('Ground Truth Transcript:',transcript)
-    print('Quartznet Transcript:',quartznet_transcript[0])
+    #print('Quartznet Transcript:',quartznet_transcript[0])
     print('CTC Segmentation Dense Sequnce:\n',''.join(state_list))
 
     #save onset per word.
@@ -119,36 +120,41 @@ def read_manifest(filename):
     transcripts = [t["text"] for t in line_list]
     return files,transcripts
 
-def validate_files(filename_list,audio_path):
-    if not os.path.exists(filename_list[0]):
-        print(filename_list[0],' dne, attempting to create in expected path')
-
 def strip_path(filename):
     return filename.split('/')[-1]
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Example ASR Trainer")
-    #parser.add_argument("--model-yaml", required=False, default=None, type=str,help='the nemo model reference yaml.')
-    #parser.add_argument("--nemo-manifest", required=False, default=None, type=str,help='the nemo model reference yaml.')
-    #parser.add_argument('-n',"--num-to-evaluate", required=False, default=4, type=int)
-    #args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Run Audio files / Transcripts (from nemo audio manifest)  through a known model for lyric alignment predictions, and save to file.")
+    parser.add_argument('-c','--config', required=False, default='test/sample.cfg', type=str,help='config file with model, audio, prediction setup information.')
+    args = parser.parse_args()
 
+    config = ConfigParser(inline_comment_prefixes=["#"])
+    config.read(args.config)
 
-    #config = ConfigParser(inline_comment_prefixes=["#"])
-    #config.read(args.config_path)
+    audio_manifest_path = config.get('main','AUDIO_MANIFEST')
+    
+    exit_flag = False
+    if not os.path.exists(audio_manifest_path):
+        print(audio_manifest_path,'not found.  Exiting.')
+        exit_flag = True
+    
+    model_filename      = config.get('main','MODEL')
+    if not os.path.exists(model_filename):
+        print(model_filename,'not found.  Exiting.')
+        exit_flag = True
+    
+    prediction_path     = config.get('main','PREDICTION_PATH')
+    if not os.path.exists(prediction_path):
+        print(prediction_path,'not found.  It should be fine.')
+        #TODO: make directory if doesn't exist...
 
-    #paths = get_params(config)
-
-    #location of audio manifest
-    audio_manifest_path = '10_songs_dali_train_04/dali_test_74ab294511ff4c2fa1b1e27be26b2834.json'
-    model_path          = '10_songs_dali_train_04/version_58/quartznet_15x5_22k_adam_cosine.01.nemo'
-    prediction_path     = '10_songs_dali_train_04/version_58/predictions'
+    if exit_flag: sys.exit()
 
     files,transcripts = read_manifest(audio_manifest_path)
     
     #load model 
-    asr_model = restore_asr(model_path)
+    asr_model = restore_asr(model_filename)
 
     print('Testing',len(files),'files.')
     ptime = []
@@ -160,3 +166,6 @@ if __name__ == '__main__':
         ptime.append(term-start)
 
     print(np.mean(ptime),'to run prediction on 10s file.')
+
+    results = Evaluate.compute_metrics(config)
+    Evaluate.print_results(results)

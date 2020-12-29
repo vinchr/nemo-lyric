@@ -16,8 +16,8 @@ def mauch_correct(ref_timestamps, pred_timestamps, tolerance):
 def duration_correct(ref_timestamps, pred_timestamps, total_duration):
     # Compute for given ref and prediction timestamps and the total song duration,
     # what percentage of time the predicted position coincides with the true position (between 0 and 1)
-    assert(len(ref_timestamps) == len(pred_timestamps))
-    assert(np.max(ref_timestamps) <= total_duration and np.max(pred_timestamps) <= total_duration)
+    #assert(len(ref_timestamps) == len(pred_timestamps))
+    #assert(np.max(ref_timestamps) <= total_duration and np.max(pred_timestamps) <= total_duration)
     correct = 0.0
     ref_prev = 0.0
     pred_prev = 0.0
@@ -64,7 +64,7 @@ def read_predictions(cfg):
         prediction_filename = label_filename.replace(cfg.get("main", "LABEL_EXT"), cfg.get("main", "PREDICTION_EXT"))
         prediction = os.path.join(cfg.get("main", "PREDICTION_PATH"), prediction_filename)
         audio_filename = label_filename.replace(cfg.get("main", "LABEL_EXT"), ".wav")
-        audio, sr = librosa.load(os.path.join(cfg.get("main", "MP3_PATH"), audio_filename), sr=None, mono=True)
+        audio, sr = librosa.load(os.path.join(cfg.get("main", "WAV_PATH"), audio_filename), sr=None, mono=True)
         total_durations[label_filename] = float(len(audio)) / float(sr)
 
         # Get predictions
@@ -76,18 +76,19 @@ def read_predictions(cfg):
         pred_times = np.array([float(row[0]) for row in pred_rows])
         ref_times = np.array([float(row[0]) for row in rows])
 
-        # Apply delay to predictions
-        pred_times += float(cfg.get("main", "DELAY"))
-        if np.min(pred_times) < 0:
-            print("WARNING: When applying delay to predictions in " + str(label), " got negative time! Setting to 0!")
-            pred_times = np.maximum(pred_times, 0)
+        if len(pred_times) != 0:
+            # Apply delay to predictions
+            pred_times += float(cfg.get("main", "DELAY"))
+            if np.min(pred_times) < 0:
+                print("WARNING: When applying delay to predictions in " + str(label), " got negative time! Setting to 0!")
+                pred_times = np.maximum(pred_times, 0)
 
-        # Save reference and prediction
-        pred_dict[label_filename] = pred_times
-        ref_dict[label_filename] = ref_times
+            # Save reference and prediction
+            pred_dict[label_filename] = pred_times
+            ref_dict[label_filename] = ref_times
 
-        # Compute and save deviations
-        deviations_dict[label_filename] = pred_times - ref_times
+            # Compute and save deviations
+            deviations_dict[label_filename] = pred_times - ref_times
 
     # All predictions in one list
     all_deviations = list()
