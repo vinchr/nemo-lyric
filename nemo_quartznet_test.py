@@ -48,12 +48,28 @@ def restore_asr(restore_path):
     return quartznet_model
 
 
+def prediction_save_logprobs(asr_model,filename,transcript,prediction_dir='./predictions/'):
+    
+
+    asr_model.preprocessor._sample_rate = 22050
+    logprobs_list = asr_model.transcribe([filename], logprobs=True)[0].cpu().numpy()
+
+    print('Saving logprobs for song.')
+    if not os.path.isdir(prediction_dir):
+        print('prediction directory not found, trying to create it.')
+        os.makedirs(prediction_dir)
+        if not os.path.isabs(prediction_dir):
+            #make string absolute path
+            prediction_dir = os.path.abspath(prediction_dir)
+    audiofile = strip_path(filename)
+    pred_fname = prediction_dir+'/'+audiofile[:-4]+'_logprobs.npy'
+    #fname = open(pred_fname,'w') #jamendolyrics convention
+    np.save(pred_fname,logprobs_list)
+
 def prediction_with_alignment(asr_model,filename,transcript,prediction_dir='./predictions/'):
     
 
     asr_model.preprocessor._sample_rate = 22050
-    print("batch size: ", 
-          "preprocessor sample_rate: ", asr_model.preprocessor._sample_rate)
     
     logprobs_list = asr_model.transcribe([filename], logprobs=True)
     alphabet  = [t for t in asr_model.cfg['labels']] + ['%'] # converting to list and adding blank character.
@@ -155,11 +171,10 @@ if __name__ == '__main__':
 
     print('Testing',len(files),'files.')
     ptime = []
-    #for i in range(len(files)):
-    for i in range(277,len(files)):
+    for i in range(len(files)):
         start = time.time()
         print('Testing',strip_path(files[i]))
-        prediction_with_alignment(asr_model, files[i], transcripts[i], prediction_path)
+        prediction_save_logprobs(asr_model, files[i], transcripts[i], prediction_path)
         term = time.time()
         ptime.append(term-start)
 
