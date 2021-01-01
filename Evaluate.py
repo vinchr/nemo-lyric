@@ -70,25 +70,28 @@ def read_predictions(cfg):
         # Get predictions
         with open(prediction) as f:
             pred_rows = list(csv.reader(f, delimiter=str(cfg.get("main", "PREDICTION_DELIM"))))
-        assert (len(pred_rows) == len(rows)),label
+        #assert (len(pred_rows) == len(rows)),label
+        if (len(pred_rows) == len(rows)):
 
-        # Take start times and convert to numpy arrays
-        pred_times = np.array([float(row[0]) for row in pred_rows])
-        ref_times = np.array([float(row[0]) for row in rows])
+            # Take start times and convert to numpy arrays
+            pred_times = np.array([float(row[0]) for row in pred_rows])
+            ref_times = np.array([float(row[0]) for row in rows])
 
-        if len(pred_times) != 0:
-            # Apply delay to predictions
-            pred_times += float(cfg.get("main", "DELAY"))
-            if np.min(pred_times) < 0:
-                print("WARNING: When applying delay to predictions in " + str(label), " got negative time! Setting to 0!")
-                pred_times = np.maximum(pred_times, 0)
+            if len(pred_times) != 0:
+                # Apply delay to predictions
+                pred_times += float(cfg.get("main", "DELAY"))
+                if np.min(pred_times) < 0:
+                    print("WARNING: When applying delay to predictions in " + str(label), " got negative time! Setting to 0!")
+                    pred_times = np.maximum(pred_times, 0)
 
-            # Save reference and prediction
-            pred_dict[label_filename] = pred_times
-            ref_dict[label_filename] = ref_times
+                # Save reference and prediction
+                pred_dict[label_filename] = pred_times
+                ref_dict[label_filename] = ref_times
 
-            # Compute and save deviations
-            deviations_dict[label_filename] = pred_times - ref_times
+                # Compute and save deviations
+                deviations_dict[label_filename] = pred_times - ref_times
+        else:
+            print('nothing found.')
 
     # All predictions in one list
     all_deviations = list()

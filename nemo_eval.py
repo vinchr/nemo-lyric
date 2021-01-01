@@ -203,10 +203,12 @@ def prediction_one_song(model,audio_filename,transcript,lp_dir='tmp',lp_ext='_lo
     config.frame_duration_ms = 20  #frame duration is the window of the predictions (i.e. logprobs prediction window) 
     config.blank = len(alphabet)-1 #index for character that is intended for 'blank' - in our case, we specify the last character in alphabet.
     logprobs_filenames      = glob.glob(os.path.join(lp_dir,basename+'*'+lp_ext))
+    logprobs_filenames.sort()
+
     logprobs_list = []
     for f in logprobs_filenames:
         logprobs_list.append(np.load(f))
- 
+    
     logprobs = logprobs_list[0]
     for i in range(1,len(logprobs_list)):
         logprobs = np.concatenate((logprobs,logprobs_list[i]))
@@ -221,7 +223,6 @@ def prediction_one_song(model,audio_filename,transcript,lp_dir='tmp',lp_ext='_lo
     # Obtain list of utterances with time intervals and confidence score
     segments                            = ctc.determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
     tend = time.time()
-    
     pred_fname = prediction_dir+'/'+basename+'_align.csv' #jamendolyrics convention
     fname = open(pred_fname,'w') 
     offset = 0  #offset is used to compensate for the re.search command which only finds the first 
@@ -329,8 +330,8 @@ if __name__ == '__main__':
 
             prediction_one_song(asr_model,strip_path(song_fname),transcript,lp_dir=tmp_dir,lp_ext=logprobs_ext,prediction_dir=prediction_path,prediction_ext='_align.csv')
 
-    delay = np.arange(0,25.0,1.0)
-    #delay = [0]
+    #delay = np.arange(0,25.0,1.0)
+    delay = [0]
     ae_list = []
     results_list = []
     preds_list = []
