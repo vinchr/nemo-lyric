@@ -67,7 +67,15 @@ def train_asr(params, resume_from_checkpoint, gpus, epochs, do_ddp):
     # fast_dev_run = 5000
     precision = 16 if gpus > 0 else 32
     precision = 32
+    callbacks = None
+    if ('validation_ds' in params['model'] and
+            'manifest_filepath' in params['model']['validation_ds'] and
+            params['model']['validation_ds']['manifest_filepath']):
+        callbacks = [pl.callbacks.ModelCheckpoint(monitor='val_loss', mode='min', save_last=True)]
+    else:
+        callbacks = [pl.callbacks.ModelCheckpoint(monitor='train_loss', mode='min', save_last=True)]
     trainer = pl.Trainer(resume_from_checkpoint=resume_from_checkpoint,
+                         callbacks=callbacks,
                          gpus=gpus,
                          max_epochs=epochs,
                          accelerator=accelerator,
