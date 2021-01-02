@@ -4,7 +4,7 @@
 # Quartznet model architecture:
 # https://github.com/NVIDIA/NeMo/blob/main/examples/asr/conf/quartznet_15x5.yaml
 #
-
+import re
 import argparse
 import json
 import os.path
@@ -19,6 +19,8 @@ import pytorch_lightning as pl
 import nemo.collections.asr as nemo_asr
 
 from nemo.utils import logging
+
+from ctc_segmentation import ctc_segmentation, CtcSegmentationParameters, prepare_text, determine_utterance_segments
 
 try:
     from torch.cuda.amp import autocast
@@ -106,6 +108,7 @@ def validate_asr(asr_model, val_ds, num_to_validate):
     # trainer = pl.Trainer()
     # trainer.test(asr_model.test_dataloader())
     calc_wer(asr_model)
+    #asr_model.preprocessor._sample_rate = 22050.
     asr_model.preprocessor._sample_rate = test_cfg['sample_rate']
     print("batch size: ", test_cfg['batch_size'],
           "preprocessor sample_rate: ", asr_model.preprocessor._sample_rate)
@@ -113,6 +116,67 @@ def validate_asr(asr_model, val_ds, num_to_validate):
         val_files, batch_size=test_cfg['batch_size'], logprobs=False)
     print(transcription)
 
+def validate_asr_with_alignment(asr_model,val_ds,num_to_validate):
+    
+    val_set = []
+    with open(val_ds) as F:
+        for line in F:
+            val = json.loads(line)
+            val_set.append(val)
+    val_files = [t["audio_filepath"] for t in val_set[0:num_to_validate]]
+    val_text = [t["text"] for t in val_set[0:num_to_validate]]
+    test_cfg = asr_model.cfg['validation_ds']
+    test_cfg['manifest_filepath'] = val_ds
+    asr_model.setup_test_data(test_cfg)  #TODO: what is this doing?
+    calc_wer(asr_model)
+    asr_model.preprocessor._sample_rate = test_cfg['sample_rate']
+    print("batch size: ", test_cfg['batch_size'],
+          "preprocessor sample_rate: ", asr_model.preprocessor._sample_rate)
+    
+    logprobs_list = asr_model.transcribe(val_files, batch_size=test_cfg['batch_size'], logprobs=True)
+    nlogprobs = len(logprobs_list)
+    alphabet  = [t for t in asr_model.cfg['labels']] + ['%'] # converting to list and adding blank character.
+
+    # adapted example from here:
+    # https://github.com/lumaku/ctc-segmentation
+    config = CtcSegmentationParameters()
+    config.frame_duration_ms = 20  #frame duration is the window of the predictions (i.e. logprobs prediction window) 
+    config.blank = len(alphabet)-1 #index for character that is intended for 'blank' - in our case, we specify the last character in alphabet.
+
+    for ii in range(nlogprobs):
+        transcript = val_text[ii]
+
+        ground_truth_mat, utt_begin_indices = prepare_text(config,transcript,alphabet)
+
+        timings, char_probs, state_list     = ctc_segmentation(config,logprobs_list[ii].cpu().numpy(),ground_truth_mat)
+        
+        # Obtain list of utterances with time intervals and confidence score
+        segments                            = determine_utterance_segments(config, utt_begin_indices, char_probs, timings, transcript)
+        
+        quartznet_transcript = asr_model.transcribe([val_files[ii]])
+
+        print('Ground Truth Transcript:',transcript)
+        print('Quartznet Transcript:',quartznet_transcript[0])
+        print('CTC Segmentation Dense Sequnce:\n',''.join(state_list))
+
+        #save onset per word.
+        print('Saving timing prediction.')
+        fname = open(val_files[ii][:-4]+'_align.csv','w') #jamendolyrics convention
+        for i in transcript.split():
+           # re.search performs regular expression operations.
+           # .format inserts characters into {}.  
+           # r'<string>' is considered a raw string.
+           # char.start() gives you the start index of the starting character of the word (i) in transcript string
+           # char.end() gives you the last index of the ending character** of the word (i) in transcript string
+           # **the ending character is offset by one for the regex command, so a -1 is required to get the right 
+           # index
+           char = re.search(r'\b({})\b'.format(i),transcript)
+           #       segments[index of character][start time of char=0]
+           onset = segments[char.start()][0]
+           #       segments[index of character][end time of char=1]
+           term  = segments[char.end()-1][1]
+           fname.write(str(onset)+','+str(term)+'\n')
+        fname.close()
 
 # Adapted from an example in NeMo repo
 def calc_wer(asr_model):
@@ -188,7 +252,7 @@ def main():
         if asr_pretrained:
             validate_asr(asr_pretrained, args.val_ds, args.num_to_validate)
         if asr_model:
-            validate_asr(asr_model, args.val_ds, args.num_to_validate)
+            validate_asr_with_alignment(asr_model, args.val_ds, args.num_to_validate)
 
 
 if __name__ == '__main__':
